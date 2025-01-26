@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
+from fastapi import HTTPException
+from sqlalchemy import func
 from ..database import get_db
 from ..models import WaterLog, EnergyLog, User
 from ..auth import get_current_user
-from fastapi import HTTPException
-from sqlalchemy import func
 
 router = APIRouter()
-
 
 @router.get("/summary", response_model=dict)
 def get_usage_summary(

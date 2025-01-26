@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from ..database import get_db
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from ..database import get_db
 from ..models import User
 from ..auth import verify_password, hash_password, JWTBearer, verify_access_token, oauth2_scheme
 from ..schemas import UserCreate, UserResponse, UserLogin, Token, VerifyAccessToken
-from sqlalchemy import or_
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
 router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
@@ -30,7 +29,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     new_user = User(username=user.username, email=user.email, hashed_password=hashed_password, first_name=user.first_name, last_name=user.last_name)
     db.add(new_user)
     db.commit()
-    db.refresh(new_user)  # Refresh the instance to return it
+    db.refresh(new_user)
     return new_user
 
 

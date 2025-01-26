@@ -8,7 +8,6 @@ BASE_PATH = Path(__file__).resolve().parent
 
 app = FastAPI(title="Personal Resource Tracker API")
 
-# Set all CORS enabled origins
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
@@ -27,7 +26,6 @@ app.include_router(general.router, prefix="/general", tags=["General Logs"])
 
 
 if __name__ == "__main__":
-    # Use this for debugging purposes only
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8001, log_level="debug")

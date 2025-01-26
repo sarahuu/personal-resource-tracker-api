@@ -1,12 +1,17 @@
+import calendar
+import pandas as pd
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import extract, func, desc
+from fastapi.responses import StreamingResponse
+from io import BytesIO
+from datetime import datetime, timedelta
+
 from ..database import get_db
 from ..models import EnergyLog, User
-from ..schemas import EnergyLogCreate, EnergyLogList, EnergyLogResponse
+from ..schemas import EnergyLogCreate, EnergyLogList, EnergyLogResponse, GenSummaryResponse
 from ..auth import get_current_user
-from datetime import datetime, timedelta
-from sqlalchemy import extract, func, desc
-import calendar
 
 router = APIRouter()
 @router.get("/", response_model=EnergyLogList)
@@ -35,7 +40,7 @@ def get_all_energy_logs(
 def create_energy_log(
     energy_log: EnergyLogCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # Fetch the current user
+    current_user: User = Depends(get_current_user)
 ):
 
     try:
@@ -48,7 +53,7 @@ def create_energy_log(
             )
         
         db_log = EnergyLog(
-            user_id=user.id,  # Associate the log with the current user
+            user_id=user.id,
             date=energy_log.date,
             qty=energy_log.qty,
             unit=energy_log.unit,
@@ -58,20 +63,17 @@ def create_energy_log(
         db.refresh(db_log)
         return db_log
     except Exception as e:
-        db.rollback()  # Rollback the transaction if any error occurs
+        db.rollback()
         raise HTTPException(status_code=400, detail=f"Error creating energy log: {str(e)}")
 
 
 @router.get("/logs-by-month", response_model=list)
 def get_energy_logs_grouped_by_month(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user) , # Fetch the current user
+    current_user: User = Depends(get_current_user) ,
 ):
     try:
         user = db.query(User).filter(User.username == current_user).first()
-        today = datetime.now()
-
-        # Get the current year
         current_year = datetime.now().year
 
 
@@ -81,20 +83,17 @@ def get_energy_logs_grouped_by_month(
                 func.sum(EnergyLog.qty).label("total_qty"),
                 func.count(EnergyLog.id).label("log_count")
             )
-            .filter(EnergyLog.user_id == user.id)  # Filter by current user
-            .filter(extract("year", EnergyLog.date) == current_year)  # Filter by current year
-            .group_by(extract("month", EnergyLog.date))  # Group by month
-            .order_by(extract("month", EnergyLog.date))  # Sort by month
+            .filter(EnergyLog.user_id == user.id) 
+            .filter(extract("year", EnergyLog.date) == current_year)
+            .group_by(extract("month", EnergyLog.date))
+            .order_by(extract("month", EnergyLog.date))
             .all()
         )
 
-        # Initialize all months with a default value of 0
         grouped_logs = [{"name": calendar.month_name[i][:3], "qty": 0} for i in range(1, 13)]
 
-        # Update with actual values from the query
         for log in logs:
             month_name = calendar.month_name[int(log.month)][:3]
-            # Find the index corresponding to the month and update the qty value
             for entry in grouped_logs:
                 if entry["name"] == month_name:
                     entry["qty"] = log.total_qty
@@ -108,34 +107,29 @@ def get_energy_logs_grouped_by_month(
 @router.get("/logs-by-week", response_model=list)
 def get_energy_logs_grouped_by_current_week(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),  # Fetch the current user
+    current_user: User = Depends(get_current_user),
 ):
     try:
         user = db.query(User).filter(User.username == current_user).first()
 
-        # Calculate the start and end of the current week
         today = datetime.now()
-        start_of_week = today - timedelta(days=today.weekday())  # Monday
-        end_of_week = start_of_week + timedelta(days=6)  # Sunday
+        start_of_week = today - timedelta(days=today.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
 
-            # Group by day of the week for the current week
         logs = (
             db.query(
-                extract("dow", EnergyLog.date).label("day_of_week"),  # Day of the week (0=Sunday, 1=Monday, ...)
+                extract("dow", EnergyLog.date).label("day_of_week"),
                 func.sum(EnergyLog.qty).label("total_qty")
             )
-            .filter(EnergyLog.user_id == user.id)  # Filter by user
-            .filter(EnergyLog.date >= start_of_week)  # Start of the current week
-            .filter(EnergyLog.date <= end_of_week)  # End of the current week
-            .group_by(extract("dow", EnergyLog.date))  # Group by day of the week
-            .order_by(extract("dow", EnergyLog.date))  # Sort by day of the week
+            .filter(EnergyLog.user_id == user.id)
+            .filter(EnergyLog.date >= start_of_week)
+            .filter(EnergyLog.date <= end_of_week)
+            .group_by(extract("dow", EnergyLog.date))
+            .order_by(extract("dow", EnergyLog.date))
             .all()
         )
 
-        # Initialize all days of the week with a default value of 0
         grouped_logs = [{"name": day, "qty": 0} for day in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]]
-
-        # Update the list with actual values from the query
         for log in logs:
             day_name = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][int(log.day_of_week) - 1]  # Map day number to name
             for entry in grouped_logs:
@@ -156,7 +150,6 @@ def delete_energy_log(
 ):
     try:
         user = db.query(User).filter(User.username == current_user).first()
-        # Retrieve the energy log to ensure it exists and belongs to the current user
         energy_log = db.query(EnergyLog).filter(EnergyLog.id == log_id, EnergyLog.user_id == user.id).first()
         if not energy_log:
             raise HTTPException(
@@ -174,7 +167,7 @@ def delete_energy_log(
             detail=f"An error occurred while deleting the energy log: {str(e)}",
         )
 
-@router.get("/summary", response_model=dict)
+@router.get("/summary", response_model=GenSummaryResponse)
 def get_energy_logs_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -182,12 +175,10 @@ def get_energy_logs_summary(
     try:
         user = db.query(User).filter(User.username == current_user).first()
 
-        # Calculate date ranges
         today = datetime.now()
         start_of_week = today - timedelta(days=today.weekday())
         start_of_month = today.replace(day=1)
 
-        # Query totals
         total_today = (
             db.query(func.sum(EnergyLog.qty))
             .filter(
@@ -215,7 +206,6 @@ def get_energy_logs_summary(
             .scalar() or 0
         )
 
-        # Build the response
         return {
             "today": total_today,
             "this_week": total_this_week,
@@ -227,3 +217,28 @@ def get_energy_logs_summary(
             status_code=400,
             detail=f"Error fetching energy log summary: {str(e)}",
         )
+
+
+@router.get("/export-energy-logs-excel")
+def export_energy_logs_excel(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    try:
+        user = db.query(User).filter(User.username == current_user).first()
+        # Fetch energy logs from the database
+        logs = db.query(EnergyLog).filter(EnergyLog.user_id == user.id).all()
+
+        if not logs:
+            raise HTTPException(status_code=404, detail="No water logs found.")
+
+        data = [{"Date": log.date, "Quantity": log.qty, "Unit":log.unit.value} for log in logs]
+        df = pd.DataFrame(data)
+
+        excel_file = BytesIO()
+        df.to_excel(excel_file, index=False, engine="openpyxl")
+        excel_file.seek(0) 
+
+        return StreamingResponse(
+            excel_file, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": "attachment; filename=energy_logs.xlsx"}
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error exporting logs: {str(e)}")

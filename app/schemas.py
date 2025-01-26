@@ -1,10 +1,9 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import List
 from datetime import date as date_o
 from .models import WaterUnit, WaterCategory, EnergyUnit
 
 
-# User In schema (used during login and registration)
 class UserCreate(BaseModel):
     first_name: str
     last_name: str
@@ -27,7 +26,6 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
-# Token schema (used to return a JWT)
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -37,7 +35,6 @@ class VerifyAccessToken(BaseModel):
     message: str
     username: str
 
-#water log create is the same as response
 class WaterLogCreate(BaseModel):
     qty: float
     unit: WaterUnit
@@ -70,7 +67,10 @@ class EnergyLogList(BaseModel):
 
 class WaterLogList(BaseModel):
     result:List[WaterLogResponse]
-
-
     class Config:
         orm_mode = True
+
+class GenSummaryResponse(BaseModel):
+    today:float
+    this_week:float
+    this_month:float
