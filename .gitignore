@@ -172,5 +172,5 @@ cython_debug/
 
 *.db
 *.ini
-*.txt
+notes.txt
 alembic/*
