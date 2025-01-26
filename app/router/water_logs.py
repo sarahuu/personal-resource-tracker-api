@@ -5,7 +5,7 @@ from ..models import WaterLog, User, WaterUnit
 from ..schemas import WaterLogCreate, WaterLogResponse, WaterLogList
 from ..auth import get_current_user
 from datetime import datetime, timedelta
-from sqlalchemy import extract, func
+from sqlalchemy import extract, func, desc
 from typing import Optional
 import calendar
 
@@ -27,7 +27,7 @@ def get_all_water_logs(
                 detail="User not found.",
             )
         # Query all water logs for the user
-        water_logs = db.query(WaterLog).filter(WaterLog.user_id == user.id).all()
+        water_logs = db.query(WaterLog).filter(WaterLog.user_id == user.id).order_by(desc(WaterLog.date)).all()
         return {'result':water_logs}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error retrieving water logs: {str(e)}")

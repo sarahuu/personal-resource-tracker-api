@@ -5,7 +5,7 @@ from ..models import EnergyLog, User
 from ..schemas import EnergyLogCreate, EnergyLogList, EnergyLogResponse
 from ..auth import get_current_user
 from datetime import datetime, timedelta
-from sqlalchemy import extract, func
+from sqlalchemy import extract, func, desc
 import calendar
 
 router = APIRouter()
@@ -25,7 +25,7 @@ def get_all_energy_logs(
                 detail="User not found.",
             )
         # Query all energy logs for the user
-        energy_logs = db.query(EnergyLog).filter(EnergyLog.user_id == user.id).all()
+        energy_logs = db.query(EnergyLog).filter(EnergyLog.user_id == user.id).order_by(desc(EnergyLog.date)).all()
         return {'result':energy_logs}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error retrieving energy logs: {str(e)}")
