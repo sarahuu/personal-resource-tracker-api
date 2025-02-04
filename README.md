@@ -1,4 +1,4 @@
-# Water and Energy Log API
+# Water and Energy Log API (School Project)
 
 A FastAPI-based application for managing water and energy logs, providing endpoints for tracking, grouping, and exporting logs. It also includes user authentication using JWT tokens.
 
