@@ -144,9 +144,12 @@ def get_water_logs_grouped_by_current_week(
         result=[]
         user = db.query(User).filter(User.username == current_user).first()
 
-        today = datetime.now()
+        today = datetime.today()
         start_of_week = today - timedelta(days=today.weekday())
         end_of_week = start_of_week + timedelta(days=6)
+        print(start_of_week.date(), end_of_week.date())
+
+        # logs = db.query(WaterLog).filter(WaterLog.date == datetime(2025, 2, 3).date()).all()
 
         if pie:
             logs = (
@@ -155,8 +158,8 @@ def get_water_logs_grouped_by_current_week(
                     func.sum(WaterLog.qty_litres).label("total_qty")
                 )
                 .filter(WaterLog.user_id == user.id)
-                .filter(WaterLog.date >= start_of_week)
-                .filter(WaterLog.date <= end_of_week)
+                .filter(WaterLog.date >= start_of_week.date())
+                .filter(WaterLog.date <= end_of_week.date())
                 .group_by(WaterLog.category)
                 .all()
             )
@@ -172,8 +175,8 @@ def get_water_logs_grouped_by_current_week(
                     func.sum(WaterLog.qty_litres).label("total_qty")
                 )
                 .filter(WaterLog.user_id == user.id)
-                .filter(WaterLog.date >= start_of_week)
-                .filter(WaterLog.date <= end_of_week)
+                .filter(WaterLog.date >= start_of_week.date())
+                .filter(WaterLog.date <= end_of_week.date())
                 .group_by(extract("dow", WaterLog.date))
                 .order_by(extract("dow", WaterLog.date))
                 .all()
@@ -243,8 +246,8 @@ def get_water_logs_summary(
             db.query(func.sum(WaterLog.qty_litres))
             .filter(
                 WaterLog.user_id == user.id,
-                WaterLog.date >= start_of_week,
-                WaterLog.date <= today,
+                WaterLog.date >= start_of_week.date(),
+                WaterLog.date <= today.date(),
             )
             .scalar() or 0
         )
@@ -252,8 +255,8 @@ def get_water_logs_summary(
             db.query(func.sum(WaterLog.qty_litres))
             .filter(
                 WaterLog.user_id == user.id,
-                WaterLog.date >= start_of_month,
-                WaterLog.date <= today,
+                WaterLog.date >= start_of_month.date(),
+                WaterLog.date <= today.date(),
             )
             .scalar() or 0
         )

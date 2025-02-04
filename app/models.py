@@ -41,7 +41,7 @@ class WaterLog(Base):
     unit = Column(Enum(WaterUnit), nullable=False)
     category = Column(Enum(WaterCategory), nullable=False)
     date = Column(Date)
-    created_at = Column(Date, default=datetime.utcnow)
+    created_at = Column(Date, default=datetime.today())
     user = relationship("User", back_populates="water_logs")
 
 class EnergyLog(Base):
@@ -51,5 +51,5 @@ class EnergyLog(Base):
     qty = Column(Float)
     unit = Column(Enum(EnergyUnit), nullable=False)
     date = Column(Date)
-    created_at = Column(Date, default=datetime.utcnow)
+    created_at = Column(Date, default=datetime.today())
     user = relationship("User", back_populates="energy_logs")

@@ -122,8 +122,8 @@ def get_energy_logs_grouped_by_current_week(
                 func.sum(EnergyLog.qty).label("total_qty")
             )
             .filter(EnergyLog.user_id == user.id)
-            .filter(EnergyLog.date >= start_of_week)
-            .filter(EnergyLog.date <= end_of_week)
+            .filter(EnergyLog.date >= start_of_week.date())
+            .filter(EnergyLog.date <= end_of_week.date())
             .group_by(extract("dow", EnergyLog.date))
             .order_by(extract("dow", EnergyLog.date))
             .all()
@@ -191,8 +191,8 @@ def get_energy_logs_summary(
             db.query(func.sum(EnergyLog.qty))
             .filter(
                 EnergyLog.user_id == user.id,
-                EnergyLog.date >= start_of_week,
-                EnergyLog.date <= today,
+                EnergyLog.date >= start_of_week.date(),
+                EnergyLog.date <= today.date(),
             )
             .scalar() or 0
         )
@@ -200,8 +200,8 @@ def get_energy_logs_summary(
             db.query(func.sum(EnergyLog.qty))
             .filter(
                 EnergyLog.user_id == user.id,
-                EnergyLog.date >= start_of_month,
-                EnergyLog.date <= today,
+                EnergyLog.date >= start_of_month.date(),
+                EnergyLog.date <= today.date(),
             )
             .scalar() or 0
         )
